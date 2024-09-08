@@ -21,7 +21,7 @@ namespace pp
         static void mainTask(void* _pvParameter);
         static void buttonTask(void* _pvParameter);
 
-        enum class State
+        enum class State : uint8_t
         {
             Init,
             Menu,
@@ -29,35 +29,33 @@ namespace pp
             Game,
             Finish
         };
-        enum class StateStatus
+        enum class StateStatus : uint8_t
         {
-            None,
             Ignored,
             Handled,
             Transit
         };
-        enum class StateEvent
+
+        enum class StateTransit : uint8_t
         {
-            None,
-            STATE_ENTER,
-            STATE_EXIT,
-            //
-            TICK,
-            //
-            BUTTON_UP,
-            BUTTON_DOWN,
-            BUTTON_LEFT,
-            BUTTON_RIGHT,
+            Enter,
+            Exit,
         };
 
-        void dispatch(StateEvent _event);
-        StateEvent appToStateEvent(AppEvent _event) const;
-        StateStatus dispatchToState(State _state, StateEvent _event);
-        StateStatus dispatchInitState(StateEvent _event);
-        StateStatus dispatchMenuState(StateEvent _event);
-        StateStatus dispatchSettingsState(StateEvent _event);
-        StateStatus dispatchGameState(StateEvent _event);
-        StateStatus dispatchFinishState(StateEvent _event);
+        void dispatch(AppEvent _event);
+        void transit(State _state, StateTransit _transit);
+
+        StateStatus dispatchToState(State _state, AppEvent _event);
+        void transitInitState(StateTransit _transit);
+        void transitMenuState(StateTransit _transit);
+        void transitSettingsState(StateTransit _transit);
+        void transitGameState(StateTransit _transit);
+        void transitFinishState(StateTransit _transit);
+        StateStatus dispatchInitState(AppEvent _event);
+        StateStatus dispatchMenuState(AppEvent _event);
+        StateStatus dispatchSettingsState(AppEvent _event);
+        StateStatus dispatchGameState(AppEvent _event);
+        StateStatus dispatchFinishState(AppEvent _event);
 
         State m_state = State::Finish;
         int m_transitFromInitAfterCount = 0;

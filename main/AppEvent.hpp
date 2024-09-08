@@ -1,6 +1,5 @@
 #pragma once
-
-#include <stdint.h>
+#include "Types.hpp"
 
 namespace pp
 {
@@ -8,10 +7,11 @@ struct AppEvent
 {
     enum class Type : uint8_t
     {
+        Tick,
         ButtonPressed,
         ButtonReleased
     };
-    uint8_t pin;
-    Type event;
+    ButtonName button = ButtonName::None;
+    Type type;
 };
 } // namespace pp

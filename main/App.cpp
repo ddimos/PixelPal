@@ -1,6 +1,7 @@
 #include "App.hpp"
 #include "PeriodicTimer.hpp"
 #include "InputManager.hpp"
+#include "Types.hpp"
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -12,6 +13,52 @@
 namespace
 {
 static const char* TAG = "PP_APP";
+
+gpio_num_t buttonToGpio(pp::ButtonName _name)
+{
+    gpio_num_t gpio = gpio_num_t::GPIO_NUM_NC; 
+    switch (_name)
+    {
+    case pp::ButtonName::RIGHT:
+        gpio = gpio_num_t::GPIO_NUM_25;
+        break;
+    case pp::ButtonName::UP:
+        gpio = gpio_num_t::GPIO_NUM_26;
+        break;
+    case pp::ButtonName::LEFT:
+        gpio = gpio_num_t::GPIO_NUM_27;
+        break;
+    case pp::ButtonName::DOWN:
+        gpio = gpio_num_t::GPIO_NUM_14;
+        break;
+    default:
+        break;
+    }
+    return gpio;
+}
+
+pp::ButtonName gpioToButton(gpio_num_t _gpio)
+{
+    pp::ButtonName name = pp::ButtonName::None;
+    switch (_gpio)
+    {
+    case gpio_num_t::GPIO_NUM_25:
+        name = pp::ButtonName::RIGHT;
+        break;
+    case gpio_num_t::GPIO_NUM_26:
+        name = pp::ButtonName::UP;
+        break;
+    case gpio_num_t::GPIO_NUM_27:
+        name = pp::ButtonName::LEFT;
+        break;
+    case gpio_num_t::GPIO_NUM_14:
+        name = pp::ButtonName::DOWN;
+        break;
+    default:
+        break;
+    }
+    return name;
+}
 } // namespace
 
 namespace pp
@@ -26,22 +73,22 @@ void App::start()
     m_display.init();
     m_inputManager.init(
         {
-            input::Button{ .gpio = gpio_num_t::GPIO_NUM_25 },
-            input::Button{ .gpio = gpio_num_t::GPIO_NUM_26 },
-            input::Button{ .gpio = gpio_num_t::GPIO_NUM_27 },
-            input::Button{ .gpio = gpio_num_t::GPIO_NUM_14 }
+            input::Button{ .gpio = buttonToGpio(ButtonName::RIGHT) },
+            input::Button{ .gpio = buttonToGpio(ButtonName::UP) },
+            input::Button{ .gpio = buttonToGpio(ButtonName::LEFT) },
+            input::Button{ .gpio = buttonToGpio(ButtonName::DOWN)}
         },
         [queueHandle](const pp::input::Button& _button){
             pp::AppEvent event{
-                .pin = (uint8_t)_button.gpio,
-                .event = pp::AppEvent::Type::ButtonPressed,
+                .button = gpioToButton(_button.gpio),
+                .type = pp::AppEvent::Type::ButtonPressed,
             };
             xQueueSend(queueHandle, &event, portMAX_DELAY);
         },
         [queueHandle](const pp::input::Button& _button){
             pp::AppEvent event{
-                .pin = (uint8_t)_button.gpio,
-                .event = pp::AppEvent::Type::ButtonReleased,
+                .button = gpioToButton(_button.gpio),
+                .type = pp::AppEvent::Type::ButtonReleased,
             };
             xQueueSend(queueHandle, &event, portMAX_DELAY);
         }
@@ -52,7 +99,7 @@ void App::start()
     xTaskCreate(&mainTask, "mainTask", CONFIG_ESP_MAIN_TASK_STACK_SIZE, this, 9, NULL);
 
     m_state = State::Init;
-    dispatchToState(m_state, StateEvent::STATE_ENTER);
+    transit(m_state, StateTransit::Enter);
 
     // We will return from app_main after initializing everything
 }
@@ -69,16 +116,13 @@ void App::mainTask(void* _pvParameter)
         AppEvent event;
         while( xQueueReceive( app->m_queueHandle, &event, 0 ))
         {
-            ESP_LOGI(TAG, "handling  %d %d, ", (int)event.event, event.pin);
-            if (event.event != AppEvent::Type::ButtonPressed)
-                continue;
-            
-            StateEvent stateEvent = app->appToStateEvent(event);
-            
-            app->dispatch(stateEvent);
+            ESP_LOGI(TAG, "handling  %d %d, ", (int)event.type, (int)event.button);
+
+            app->dispatch(event);
         }
 
-        app->dispatch(StateEvent::TICK);
+        event = AppEvent{ .type = pp::AppEvent::Type::Tick };
+        app->dispatch(event);
         
         vTaskDelayUntil( &xLastWakeTime, xFrequency );
     }
@@ -98,42 +142,42 @@ void App::buttonTask(void* _pvParameter)
     }
 }  
 
-void App::dispatch(StateEvent _event)
+void App::dispatch(AppEvent _event)
 {
     State prevState = m_state;
     StateStatus status = dispatchToState(m_state, _event);
     if (status == StateStatus::Transit)
     {
-        dispatchToState(prevState, StateEvent::STATE_EXIT);
-        dispatchToState(m_state, StateEvent::STATE_ENTER);
+        transit(prevState, StateTransit::Exit);
+        transit(m_state, StateTransit::Enter);
     }
 }
 
-App::StateEvent App::appToStateEvent(AppEvent _event) const
+void App::transit(State _state, StateTransit _transit)
 {
-    StateEvent stateEvent = StateEvent::None;
-    switch (_event.pin)
+    switch (_state)
     {
-        case gpio_num_t::GPIO_NUM_25:
-            stateEvent = pp::App::StateEvent::BUTTON_RIGHT;
-            break;
-        case gpio_num_t::GPIO_NUM_26:
-            stateEvent = pp::App::StateEvent::BUTTON_UP;
-            break;
-        case gpio_num_t::GPIO_NUM_27:
-            stateEvent = pp::App::StateEvent::BUTTON_LEFT;
-            break;
-        case gpio_num_t::GPIO_NUM_14:
-            stateEvent = pp::App::StateEvent::BUTTON_DOWN;
-            break;
-        default:
-            break;
-        
+    case State::Init:
+        transitInitState(_transit);
+        break;
+    case State::Menu:
+        transitMenuState(_transit);
+        break;
+    case State::Settings:
+        transitSettingsState(_transit);
+        break;
+    case State::Game:
+        transitGameState(_transit);
+        break;
+    case State::Finish:
+        transitFinishState(_transit);
+        break;    
+    default:
+        break;
     }
-    return stateEvent;
 }
 
-App::StateStatus App::dispatchToState(State _state, StateEvent _event)
+App::StateStatus App::dispatchToState(State _state, AppEvent _event)
 {
     StateStatus status = StateStatus::Ignored;
     switch (_state)
@@ -159,19 +203,26 @@ App::StateStatus App::dispatchToState(State _state, StateEvent _event)
     return status;
 }
 
-App::StateStatus App::dispatchInitState(StateEvent _event)
+void App::transitInitState(StateTransit _transit)
 {
-    StateStatus status = StateStatus::Ignored;
-    switch (_event)
+    switch (_transit)
     {
-    case StateEvent::STATE_ENTER:
+    case StateTransit::Enter:
         m_transitFromInitAfterCount = 20;
         m_display.drawText("    PixelPal", 12, 4);
         break;
-    case StateEvent::STATE_EXIT:
+    case StateTransit::Exit:
         m_display.clear();
         break;
-    case StateEvent::TICK:
+    }
+}
+
+App::StateStatus App::dispatchInitState(AppEvent _event)
+{
+    StateStatus status = StateStatus::Ignored;
+    switch (_event.type)
+    {
+    case AppEvent::Type::Tick:
         --m_transitFromInitAfterCount;
         if (m_transitFromInitAfterCount <= 0)
         {
@@ -185,61 +236,83 @@ App::StateStatus App::dispatchInitState(StateEvent _event)
     return status;
 }
 
-App::StateStatus App::dispatchMenuState(StateEvent _event)
+void App::transitMenuState(StateTransit _transit)
 {
-    StateStatus status = StateStatus::Ignored;
-
-    switch (_event)
+    switch (_transit)
     {
-    case StateEvent::STATE_ENTER:
+    case StateTransit::Enter:
         m_display.drawText("Start     <", 11, 3);
         m_display.drawText("Settings   ", 11, 5);
         m_cursorPos = 0;
         break;
-    case StateEvent::STATE_EXIT:
+    case StateTransit::Exit:
         m_display.clear();
         break;
-    case StateEvent::BUTTON_DOWN:
-        if (m_cursorPos == 0)
+    }
+}
+
+App::StateStatus App::dispatchMenuState(AppEvent _event)
+{
+    StateStatus status = StateStatus::Ignored;
+
+    switch (_event.type)
+    {
+    case AppEvent::Type::ButtonReleased:
+        switch (_event.button)
         {
-            m_cursorPos++;
-            m_display.drawText("Start      ", 11, 3);
-            m_display.drawText("Settings  <", 11, 5);
+        case ButtonName::DOWN:
+            if (m_cursorPos == 0)
+            {
+                m_cursorPos++;
+                m_display.drawText("Start      ", 11, 3);
+                m_display.drawText("Settings  <", 11, 5);
+            }
+            break;
+        case ButtonName::UP:
+            if (m_cursorPos == 1)
+            {
+                m_cursorPos--;
+                m_display.drawText("Start     <", 11, 3);
+                m_display.drawText("Settings   ", 11, 5);
+            }
+            break;
+        case ButtonName::RIGHT:
+            status = StateStatus::Transit;
+            m_state = m_cursorPos == 0 ? State::Game : State::Settings;
+            break;
+        default:
+            break;
         }
-        break;
-    case StateEvent::BUTTON_UP:
-        if (m_cursorPos == 1)
-        {
-            m_cursorPos--;
-            m_display.drawText("Start     <", 11, 3);
-            m_display.drawText("Settings   ", 11, 5);
-        }
-        break;
-    case StateEvent::BUTTON_RIGHT:
-        status = StateStatus::Transit;
-        m_state = m_cursorPos == 0 ? State::Game : State::Settings;
-        break;
     default:
         break;
     }
     return status;
 }
 
-App::StateStatus App::dispatchSettingsState(StateEvent _event)
+void App::transitSettingsState(StateTransit _transit)
 {
-    StateStatus status = StateStatus::Ignored;
-
-    switch (_event)
+    switch (_transit)
     {
-    case StateEvent::STATE_ENTER:
+    case StateTransit::Enter:
         m_display.drawText("   Settings", 11, 2);
         break;
-    case StateEvent::STATE_EXIT:
+    case StateTransit::Exit:
         m_display.clear();
         break;
-    case StateEvent::BUTTON_LEFT:
-        status = StateStatus::Transit;
-        m_state = State::Menu;
+    }
+}
+
+App::StateStatus App::dispatchSettingsState(AppEvent _event)
+{
+    StateStatus status = StateStatus::Ignored;
+    switch (_event.type)
+    {
+    case AppEvent::Type::ButtonReleased:
+        if (_event.button == ButtonName::LEFT)
+        {
+            status = StateStatus::Transit;
+            m_state = State::Menu;
+        }
         break;
     default:
         break;
@@ -247,34 +320,39 @@ App::StateStatus App::dispatchSettingsState(StateEvent _event)
     return status;
 }
 
-App::StateStatus App::dispatchGameState(StateEvent _event)
+void App::transitGameState(StateTransit _transit)
 {
-    StateStatus status = StateStatus::Ignored;
-    switch (_event)
+    switch (_transit)
     {
-    case StateEvent::STATE_ENTER:
+    case StateTransit::Enter:
         m_display.drawText("   PLAY", 7, 2);
         break;
-    case StateEvent::STATE_EXIT:
-        break;
-    default:
+    case StateTransit::Exit:
         break;
     }
+}
+
+App::StateStatus App::dispatchGameState(AppEvent _event)
+{
+    StateStatus status = StateStatus::Ignored;
+ 
     return status;
 }
 
-App::StateStatus App::dispatchFinishState(StateEvent _event)
+void App::transitFinishState(StateTransit _transit)
 {
-    StateStatus status = StateStatus::Ignored;
-    switch (_event)
+    switch (_transit)
     {
-    case StateEvent::STATE_ENTER:
+    case StateTransit::Enter:
         break;
-    case StateEvent::STATE_EXIT:
-        break;
-    default:
+    case StateTransit::Exit:
         break;
     }
+}
+
+App::StateStatus App::dispatchFinishState(AppEvent _event)
+{
+    StateStatus status = StateStatus::Ignored;
     return status;
 }
 
