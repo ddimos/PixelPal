@@ -6,6 +6,7 @@
 #include "AppEvent.hpp"
 #include "Display.hpp"
 #include "InputManager.hpp"
+#include "game/Game.hpp"
 
 namespace pp
 {
@@ -29,21 +30,32 @@ namespace pp
             Game,
             Finish
         };
-        enum class StateStatus : uint8_t
-        {
-            Ignored,
-            Handled,
-            Transit
-        };
-
+        
         enum class StateTransit : uint8_t
         {
             Enter,
             Exit,
         };
 
+        struct StateStatus
+        {
+            StateStatus() = default;
+            StateStatus(State _nextState);
+            
+            enum class Status : uint8_t
+            {
+                Ignored,
+                Handled,
+                Transit
+            };
+            Status status = Status::Ignored;
+            State nextState = State::Init;
+
+            bool isTransitRequested() const { return status == Status::Transit; }
+        };
+
         void dispatch(AppEvent _event);
-        void transit(State _state, StateTransit _transit);
+        void transit(StateTransit _transit);
 
         StateStatus dispatchToState(State _state, AppEvent _event);
         void transitInitState(StateTransit _transit);
@@ -63,6 +75,7 @@ namespace pp
 
         Display m_display;
         input::InputManager m_inputManager;
+        game::Game m_game;
 
         QueueHandle_t m_queueHandle;
     };

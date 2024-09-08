@@ -37,6 +37,11 @@ void Display::drawText(const char* _text, int _length, int _pos)
     ssd1306_display_text(&g_display, _pos, _text, _length, false);
 }
 
+void Display::drawBitmap(int _x, int _y, uint8_t* _bitmap, int _width, int _height)
+{
+    ssd1306_bitmaps(&g_display, _x, _y, _bitmap, _width, _height, false);
+}
+
 void Display::clear()
 {
     ssd1306_clear_screen(&g_display, false);

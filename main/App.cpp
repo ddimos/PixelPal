@@ -99,7 +99,7 @@ void App::start()
     xTaskCreate(&mainTask, "mainTask", CONFIG_ESP_MAIN_TASK_STACK_SIZE, this, 9, NULL);
 
     m_state = State::Init;
-    transit(m_state, StateTransit::Enter);
+    transit(StateTransit::Enter);
 
     // We will return from app_main after initializing everything
 }
@@ -107,7 +107,7 @@ void App::start()
 void App::mainTask(void* _pvParameter)
 {
     TickType_t xLastWakeTime = xTaskGetTickCount();
-    const TickType_t xFrequency = pdMS_TO_TICKS(40); // // TODO add to config
+    const TickType_t xFrequency = pdMS_TO_TICKS(CONFIG_PP_TICK_DT_MS);
 
     App* app = static_cast<App*>(_pvParameter);
 
@@ -144,18 +144,19 @@ void App::buttonTask(void* _pvParameter)
 
 void App::dispatch(AppEvent _event)
 {
-    State prevState = m_state;
     StateStatus status = dispatchToState(m_state, _event);
-    if (status == StateStatus::Transit)
+    if (status.isTransitRequested())
     {
-        transit(prevState, StateTransit::Exit);
-        transit(m_state, StateTransit::Enter);
+        assert(m_state != status.nextState && "Cannot transit to the same state");
+        transit(StateTransit::Exit);
+        m_state = status.nextState;
+        transit(StateTransit::Enter);
     }
 }
 
-void App::transit(State _state, StateTransit _transit)
+void App::transit(StateTransit _transit)
 {
-    switch (_state)
+    switch (m_state)
     {
     case State::Init:
         transitInitState(_transit);
@@ -179,7 +180,7 @@ void App::transit(State _state, StateTransit _transit)
 
 App::StateStatus App::dispatchToState(State _state, AppEvent _event)
 {
-    StateStatus status = StateStatus::Ignored;
+    StateStatus status;
     switch (_state)
     {
     case State::Init:
@@ -219,16 +220,13 @@ void App::transitInitState(StateTransit _transit)
 
 App::StateStatus App::dispatchInitState(AppEvent _event)
 {
-    StateStatus status = StateStatus::Ignored;
+    StateStatus status;
     switch (_event.type)
     {
     case AppEvent::Type::Tick:
         --m_transitFromInitAfterCount;
         if (m_transitFromInitAfterCount <= 0)
-        {
-            status = StateStatus::Transit;
-            m_state = State::Menu;
-        }
+            status = StateStatus{ State::Menu };
         break;
     default:
         break;
@@ -253,8 +251,7 @@ void App::transitMenuState(StateTransit _transit)
 
 App::StateStatus App::dispatchMenuState(AppEvent _event)
 {
-    StateStatus status = StateStatus::Ignored;
-
+    StateStatus status;
     switch (_event.type)
     {
     case AppEvent::Type::ButtonReleased:
@@ -277,8 +274,7 @@ App::StateStatus App::dispatchMenuState(AppEvent _event)
             }
             break;
         case ButtonName::RIGHT:
-            status = StateStatus::Transit;
-            m_state = m_cursorPos == 0 ? State::Game : State::Settings;
+            status = StateStatus{ m_cursorPos == 0 ? State::Game : State::Settings};
             break;
         default:
             break;
@@ -304,15 +300,12 @@ void App::transitSettingsState(StateTransit _transit)
 
 App::StateStatus App::dispatchSettingsState(AppEvent _event)
 {
-    StateStatus status = StateStatus::Ignored;
+    StateStatus status;
     switch (_event.type)
     {
     case AppEvent::Type::ButtonReleased:
         if (_event.button == ButtonName::LEFT)
-        {
-            status = StateStatus::Transit;
-            m_state = State::Menu;
-        }
+            status = StateStatus{ State::Menu};
         break;
     default:
         break;
@@ -325,17 +318,20 @@ void App::transitGameState(StateTransit _transit)
     switch (_transit)
     {
     case StateTransit::Enter:
-        m_display.drawText("   PLAY", 7, 2);
+        m_game.init(m_display);
         break;
     case StateTransit::Exit:
+        m_game.deinit();
         break;
     }
 }
 
 App::StateStatus App::dispatchGameState(AppEvent _event)
 {
-    StateStatus status = StateStatus::Ignored;
- 
+    StateStatus status;
+    m_game.dispatch(_event);
+    if (m_game.isFinished())
+        status = StateStatus{ State::Finish};
     return status;
 }
 
@@ -352,8 +348,14 @@ void App::transitFinishState(StateTransit _transit)
 
 App::StateStatus App::dispatchFinishState(AppEvent _event)
 {
-    StateStatus status = StateStatus::Ignored;
+    StateStatus status;
     return status;
+}
+
+App::StateStatus::StateStatus(State _nextState)
+    : status{StateStatus::Status::Transit}
+    , nextState{_nextState}
+{
 }
 
 } // namespace pp

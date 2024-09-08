@@ -1,4 +1,9 @@
 menu "PixelPal Configuration"
+    config PP_TICK_DT_MS
+        int "Tick ms"
+        default 40
+        help
+            Delta time miliseconds
 
     config ESP_WIFI_SSID
         string "WiFi SSID"
