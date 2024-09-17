@@ -410,7 +410,7 @@ void ssd1306_wrap_arround(SSD1306_t * dev, ssd1306_scroll_type_t scroll, int sta
 
 }
 
-void ssd1306_bitmaps(SSD1306_t * dev, int xpos, int ypos, uint8_t * bitmap, int width, int height, bool invert)
+void ssd1306_bitmaps(SSD1306_t * dev, int xpos, int ypos, uint8_t * bitmap, int width, int height, bool invert, bool transperentMode)
 {
 	if ( (width % 8) != 0) {
 		ESP_LOGE(TAG, "width must be a multiple of 8");
@@ -435,7 +435,7 @@ void ssd1306_bitmaps(SSD1306_t * dev, int xpos, int ypos, uint8_t * bitmap, int 
 				if (invert) wk1 = ~wk1;
 
 				//wk2 = ssd1306_copy_bit(bitmap[index+offset], srcBits, wk0, dstBits);
-				wk2 = ssd1306_copy_bit(wk1, srcBits, wk0, dstBits);
+				wk2 = ssd1306_copy_bit(wk1, srcBits, wk0, dstBits, transperentMode);
 				if (dev->_flip) wk2 = ssd1306_rotate_byte(wk2);
 
 				ESP_LOGD(TAG, "index=%d offset=%d page=%d _seg=%d, wk2=%02x", index, offset, page, _seg, wk2);
@@ -461,7 +461,6 @@ void ssd1306_bitmaps(SSD1306_t * dev, int xpos, int ypos, uint8_t * bitmap, int 
 		ssd1306_dump_page(dev, page, _seg);
 	}
 #endif
-	ssd1306_show_buffer(dev);
 }
 
 
@@ -566,7 +565,7 @@ void ssd1306_flip(uint8_t *buf, size_t blen)
 	}
 }
 
-uint8_t ssd1306_copy_bit(uint8_t src, int srcBits, uint8_t dst, int dstBits)
+uint8_t ssd1306_copy_bit(uint8_t src, int srcBits, uint8_t dst, int dstBits, bool transperentMode)
 {
 	ESP_LOGD(TAG, "src=%02x srcBits=%d dst=%02x dstBits=%d", src, srcBits, dst, dstBits);
 	uint8_t smask = 0x01 << srcBits;
@@ -579,10 +578,12 @@ uint8_t ssd1306_copy_bit(uint8_t src, int srcBits, uint8_t dst, int dstBits)
 #endif
 	uint8_t _dst;
 	if (_src != 0) {
-		_dst = dst | dmask; // set bit
+		_dst = dst | dmask; 	  // set bit
 	} else {
-		_dst = dst & ~(dmask); // clear bit
-	}
+		_dst = (transperentMode) 
+				? dst			  // use the previous
+				: dst & ~(dmask); // clear bit
+	}			
 	return _dst;
 }
 
