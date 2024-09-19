@@ -58,7 +58,7 @@ void ssd1306_show_buffer(SSD1306_t * dev)
 	}
 }
 
-void ssd1306_set_buffer(SSD1306_t * dev, uint8_t * buffer)
+void ssd1306_set_buffer(SSD1306_t * dev, const uint8_t * buffer)
 {
 	int index = 0;
 	for (int page=0; page<dev->_pages;page++) {
@@ -410,7 +410,7 @@ void ssd1306_wrap_arround(SSD1306_t * dev, ssd1306_scroll_type_t scroll, int sta
 
 }
 
-void ssd1306_bitmaps(SSD1306_t * dev, int xpos, int ypos, uint8_t * bitmap, int width, int height, bool invert, bool transperentMode)
+void ssd1306_bitmaps(SSD1306_t * dev, int xpos, int ypos, const uint8_t * bitmap, int width, int height, bool invert, bool transperentMode)
 {
 	if ( (width % 8) != 0) {
 		ESP_LOGE(TAG, "width must be a multiple of 8");
