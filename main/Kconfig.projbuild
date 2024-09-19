@@ -5,6 +5,12 @@ menu "PixelPal Configuration"
         help
             Delta time miliseconds
 
+    config PP_DISABLE_ASSERT
+        bool "Disable assert"
+        default false
+        help
+            Disables asserts in the project
+
     config ESP_WIFI_SSID
         string "WiFi SSID"
         default "myssid"
