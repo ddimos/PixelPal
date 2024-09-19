@@ -37,9 +37,24 @@ void Display::drawText(const char* _text, int _length, int _pos)
     ssd1306_display_text(&g_display, _pos, _text, _length, false);
 }
 
-void Display::drawBitmap(int _x, int _y, uint8_t* _bitmap, int _width, int _height)
+void Display::addBitmap(int _x, int _y, const uint8_t* _bitmap, int _width, int _height)
 {
-    ssd1306_bitmaps(&g_display, _x, _y, _bitmap, _width, _height, false);
+    ssd1306_bitmaps(&g_display, _x, _y, _bitmap, _width, _height, false, true);
+}
+
+void Display::getBuffer(uint8_t* _buffer)
+{
+    ssd1306_get_buffer(&g_display, _buffer);
+}
+
+void Display::setBuffer(const uint8_t* _buffer)
+{
+    ssd1306_set_buffer(&g_display, _buffer);
+}
+
+void Display::display()
+{
+    ssd1306_show_buffer(&g_display);
 }
 
 void Display::clear()

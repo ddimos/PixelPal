@@ -13,8 +13,11 @@ public:
     void deinit();
 
     void drawText(const char* _text, int _length, int _pos);
-    void drawBitmap(int _x, int _y, uint8_t* _bitmap, int _width, int _height);
+    void addBitmap(int _x, int _y, const uint8_t* _bitmap, int _width, int _height);
+    void getBuffer(uint8_t* _buffer);
+    void setBuffer(const uint8_t* _buffer);
 
+    void display();
     void clear();
 };
 

@@ -1,5 +1,8 @@
 #pragma once
 
+#include "Map.hpp"
+#include "Player.hpp"
+
 namespace pp
 {
 class Display;
@@ -8,22 +11,6 @@ class AppEvent;
 
 namespace pp::game
 {
-
-struct Player
-{
-    float x_f = 0.f;
-    float y_f = 0.f;
-
-    int x_previousDraw = 0;
-    int y_previousDraw = 0;
-    int animationIndex = 0;
-    int x_speed = 50;
-
-    bool moveLeft = false;
-    bool moveRight = false;
-
-    void reset();
-};
 
 class Game
 {
@@ -40,6 +27,7 @@ public:
 
 private:
     Display* m_displayRef = nullptr;
+    Map m_map;
     Player m_player;
 };
 

@@ -2,6 +2,7 @@
 #include "PeriodicTimer.hpp"
 #include "InputManager.hpp"
 #include "Types.hpp"
+#include "utils/Assert.hpp"
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -147,7 +148,7 @@ void App::dispatch(AppEvent _event)
     StateStatus status = dispatchToState(m_state, _event);
     if (status.isTransitRequested())
     {
-        assert(m_state != status.nextState && "Cannot transit to the same state");
+        PP_ASSERT(m_state != status.nextState, "Cannot transit to the same state");
         transit(StateTransit::Exit);
         m_state = status.nextState;
         transit(StateTransit::Enter);
