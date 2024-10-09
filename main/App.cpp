@@ -117,7 +117,7 @@ void App::mainTask(void* _pvParameter)
         AppEvent event;
         while( xQueueReceive( app->m_queueHandle, &event, 0 ))
         {
-            ESP_LOGI(TAG, "handling  %d %d, ", (int)event.type, (int)event.button);
+            ESP_LOGD(TAG, "handling  %d %d, ", (int)event.type, (int)event.button);
 
             app->dispatch(event);
         }

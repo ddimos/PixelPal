@@ -33,6 +33,9 @@ void Game::dispatch(const AppEvent& _event)
     {
     case AppEvent::Type::Tick:
     {
+        m_map.update(m_player);
+        m_player.update();
+        
         if (m_player.needToDraw())
         {
             m_map.draw(*m_displayRef);
