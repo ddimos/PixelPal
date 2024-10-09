@@ -10,7 +10,8 @@ namespace
 constexpr int PLAYER_BITMAP_WIDTH = 16;
 constexpr int PLAYER_BITMAP_HEIGHT = 20;
 // player bitmaps, 16x20px
-uint8_t playerBitmaps[7][40] = {
+uint8_t playerBitmaps[9][40] = 
+{
 // 'Standing'
 {
     0x03, 0xc0, 0x07, 0xe0, 0x0f, 0xf0, 0x0d, 0xb0, 0x0f, 0xf0, 0x0f, 0xf0, 0x0e, 0x70, 0x07, 0xe0, 
@@ -21,14 +22,13 @@ uint8_t playerBitmaps[7][40] = {
 {
     0x03, 0xc0, 0x07, 0xe0, 0x0f, 0xf0, 0x0e, 0xd0, 0x0f, 0xf0, 0x0f, 0xf0, 0x0f, 0x30, 0x07, 0x20, 
     0x1b, 0xc0, 0x1d, 0x80, 0x0f, 0xf0, 0x01, 0xb8, 0x01, 0x98, 0x03, 0xc0, 0x03, 0xc0, 0x06, 0x60, 
-    0x06, 0x60, 0x1c, 0x30, 0x1c, 0x30, 0x00, 0x18, 
+    0x06, 0x60, 0x1c, 0x30, 0x1c, 0x30, 0x00, 0x18
 },
-    
 // 'Moving right 2'
 {
     0x03, 0xc0, 0x07, 0xe0, 0x0f, 0xf0, 0x0e, 0xd0, 0x0f, 0xf0, 0x0f, 0xf0, 0x0f, 0x30, 0x07, 0x20, 
     0x03, 0xc0, 0x19, 0x98, 0x3f, 0xfc, 0x19, 0x98, 0x01, 0x80, 0x03, 0xc0, 0x07, 0xe0, 0x06, 0x60, 
-    0x06, 0x60, 0x06, 0x60, 0x06, 0x60, 0x06, 0x60, 
+    0x06, 0x60, 0x06, 0x60, 0x06, 0x60, 0x06, 0x60
 },
 // 'Moving right 3'
 {
@@ -40,22 +40,42 @@ uint8_t playerBitmaps[7][40] = {
 {
     0x03, 0xc0, 0x07, 0xe0, 0x0f, 0xf0, 0x0b, 0x70, 0x0f, 0xf0, 0x0f, 0xf0, 0x0c, 0xf0, 0x04, 0xe0, 
     0x03, 0xd8, 0x01, 0xb8, 0x0f, 0xf0, 0x1d, 0x80, 0x19, 0x80, 0x03, 0xc0, 0x03, 0xc0, 0x06, 0x60, 
-    0x06, 0x60, 0x0c, 0x38, 0x0c, 0x38, 0x18, 0x00, 
+    0x06, 0x60, 0x0c, 0x38, 0x0c, 0x38, 0x18, 0x00
 },
 // 'Moving left 2'
 {
     0x03, 0xc0, 0x07, 0xe0, 0x0f, 0xf0, 0x0b, 0x70, 0x0f, 0xf0, 0x0f, 0xf0, 0x0c, 0xf0, 0x04, 0xe0, 
     0x03, 0xc0, 0x19, 0x98, 0x3f, 0xfc, 0x19, 0x98, 0x01, 0x80, 0x03, 0xc0, 0x07, 0xe0, 0x06, 0x60, 
-    0x06, 0x60, 0x06, 0x60, 0x06, 0x60, 0x06, 0x60, 
+    0x06, 0x60, 0x06, 0x60, 0x06, 0x60, 0x06, 0x60
 },
 // 'Moving left 3'
 {
     0x03, 0xc0, 0x07, 0xe0, 0x0f, 0xf0, 0x0b, 0x70, 0x0f, 0xf0, 0x0f, 0xf0, 0x0c, 0xf0, 0x04, 0xe0, 
     0x1b, 0xc0, 0x1d, 0x80, 0x0f, 0xf0, 0x01, 0xb8, 0x01, 0x98, 0x03, 0xc0, 0x03, 0xc0, 0x06, 0x60, 
     0x06, 0x60, 0x07, 0x30, 0x07, 0x30, 0x00, 0x18
+},
+// 'Moving up/down 1'
+{
+    0x03, 0xc0, 0x07, 0xe0, 0x0f, 0xf0, 0x0f, 0xf0, 0x0f, 0xf0, 0x0f, 0xf0, 0x0f, 0xf0, 0x07, 0xe0, 
+    0x03, 0xd8, 0x01, 0xb8, 0x0f, 0xf0, 0x1d, 0x80, 0x19, 0x80, 0x03, 0xc0, 0x07, 0xe0, 0x06, 0x60, 
+    0x06, 0x60, 0x06, 0x60, 0x00, 0x60, 0x00, 0x60
+},
+// 'Moving up/down 2'
+{
+    0x03, 0xc0, 0x07, 0xe0, 0x0f, 0xf0, 0x0f, 0xf0, 0x0f, 0xf0, 0x0f, 0xf0, 0x0f, 0xf0, 0x07, 0xe0, 
+    0x1b, 0xc0, 0x1d, 0x80, 0x0f, 0xf0, 0x01, 0xb8, 0x01, 0x98, 0x03, 0xc0, 0x07, 0xe0, 0x06, 0x60, 
+    0x06, 0x60, 0x06, 0x60, 0x06, 0x00, 0x06, 0x00
 }
 };
 
+constexpr uint8_t STANDING_ANIMATION_COUNT = 1;
+constexpr uint8_t SIDE_ANIMATION_COUNT = 4;
+constexpr uint8_t UP_DOWN_ANIMATION_COUNT = 2;
+
+const uint8_t g_standingAnimationSequence[STANDING_ANIMATION_COUNT] = { 0 };
+const uint8_t g_moveRightAnimationSequence[SIDE_ANIMATION_COUNT] = { 2, 1, 2, 3};
+const uint8_t g_moveLeftAnimationSequence[SIDE_ANIMATION_COUNT] = { 5, 4, 5, 6 };
+const uint8_t g_moveUpDownAnimationSequence[UP_DOWN_ANIMATION_COUNT] = { 7, 8 };
 } // namespace
 
 namespace pp::game
@@ -70,12 +90,22 @@ void Player::dispatch(const AppEvent& _event)
         if (_event.button == ButtonName::LEFT)
         {
             m_moveLeft = true;
-            m_animationIndex = 4;
+            setAnimation(g_moveLeftAnimationSequence, SIDE_ANIMATION_COUNT);
         }
         else if (_event.button == ButtonName::RIGHT)
         {
             m_moveRight = true;
-            m_animationIndex = 1;
+            setAnimation(g_moveRightAnimationSequence, SIDE_ANIMATION_COUNT);
+        }
+        else if (_event.button == ButtonName::DOWN)
+        {
+            m_moveDown = true;
+            setAnimation(g_moveUpDownAnimationSequence, UP_DOWN_ANIMATION_COUNT);
+        }
+        else if (_event.button == ButtonName::UP)
+        {
+            m_moveUp = true;
+            setAnimation(g_moveUpDownAnimationSequence, UP_DOWN_ANIMATION_COUNT, 1);
         }
         break;
     }
@@ -85,38 +115,17 @@ void Player::dispatch(const AppEvent& _event)
             m_moveLeft = false;
         else if (_event.button == ButtonName::RIGHT)
             m_moveRight = false;
-
+        else if (_event.button == ButtonName::DOWN)
+            m_moveDown = false;
+        else if (_event.button == ButtonName::UP)
+            m_moveUp = false;
+        
+        setAnimation(g_standingAnimationSequence, STANDING_ANIMATION_COUNT);
         break;
     }
     case AppEvent::Type::Tick:
     {
-        int previousAnimationIndex = m_animationIndex;
-        if (m_moveLeft || m_moveRight)
-        {
-            int d = m_moveLeft ? -1 : 1;
-            m_worldX += d * TICK_DT_S * m_speed;
-            ++m_animationIndex;
-            if (m_animationIndex == 4)
-                m_animationIndex = 1;
-            else if (m_animationIndex == 7)
-                m_animationIndex = 4;
-        }
-        else
-        {
-            m_animationIndex = 0;
-        }
-
-        int drawCurrentX = static_cast<int>(m_worldX);
-        int drawCurrentY = static_cast<int>(m_worldY);
-
-        if (m_drawX != drawCurrentX || m_drawY != drawCurrentY || previousAnimationIndex != m_animationIndex)
-        {   
-            m_needToDraw = true;
-
-            m_drawX = drawCurrentX;
-            m_drawY = drawCurrentY;
-        }
-
+        // delete tick
         break;
     }
     default:
@@ -124,10 +133,42 @@ void Player::dispatch(const AppEvent& _event)
     }
 }
 
+void Player::update()
+{
+    if (m_moveLeft || m_moveRight)
+    {
+        int d = m_moveLeft ? -1 : 1;
+        m_worldX += d * TICK_DT_S * m_speed;
+    }
+    else if (m_moveDown || m_moveUp)
+    {
+        int d = m_moveUp ? -1 : 1;
+        m_worldY += d * TICK_DT_S * m_speed;
+    }
+
+    int previousAnimationIndex = m_animationIndex;
+
+    if(m_animationIndex < (m_animationSequenceSize - 1))
+        m_animationIndex++;
+    else
+        m_animationIndex = 0;
+
+    int drawCurrentX = static_cast<int>(m_worldX);
+    int drawCurrentY = static_cast<int>(m_worldY);
+
+    if (m_drawX != drawCurrentX || m_drawY != drawCurrentY || previousAnimationIndex != m_animationIndex)
+    {   
+        m_needToDraw = true;
+
+        m_drawX = drawCurrentX;
+        m_drawY = drawCurrentY;
+    }
+}
+
 void Player::draw(Display& _displayRef)
 {
     PP_ASSERT(m_needToDraw, "Draw shouldn't be called.");
-    _displayRef.addBitmap(m_drawX, m_drawY, playerBitmaps[m_animationIndex], PLAYER_BITMAP_WIDTH, PLAYER_BITMAP_HEIGHT);
+    _displayRef.addBitmap(m_drawX, m_drawY, playerBitmaps[m_animationSequence[m_animationIndex]], PLAYER_BITMAP_WIDTH, PLAYER_BITMAP_HEIGHT);
 }
 
 void Player::reset()
@@ -143,6 +184,15 @@ void Player::reset()
     m_moveLeft = false;
     m_moveRight = false;
     m_needToDraw = false;
+
+    setAnimation(g_standingAnimationSequence, STANDING_ANIMATION_COUNT);
+}
+
+void Player::setAnimation(const uint8_t* _animationSequence, uint8_t _animationSequenceSize, uint8_t _animationIndex/*= 0*/)
+{
+    m_animationIndex = _animationIndex;
+    m_animationSequence = _animationSequence;
+    m_animationSequenceSize = _animationSequenceSize;
 }
 
 } // namespace pp::game
