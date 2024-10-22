@@ -124,6 +124,7 @@ void ssd1306_scroll_clear(SSD1306_t * dev);
 void ssd1306_hardware_scroll(SSD1306_t * dev, ssd1306_scroll_type_t scroll);
 void ssd1306_wrap_arround(SSD1306_t * dev, ssd1306_scroll_type_t scroll, int start, int end, int8_t delay);
 void ssd1306_bitmaps(SSD1306_t * dev, int xpos, int ypos, const uint8_t * bitmap, int width, int height, bool invert, bool transperentMode);
+void ssd1306_vertical_bitmaps(SSD1306_t* dev, int16_t xpos, int16_t ypos, const uint8_t* bitmap, uint8_t width, uint16_t size, bool transperentMode);
 void _ssd1306_pixel(SSD1306_t * dev, int xpos, int ypos, bool invert);
 void _ssd1306_line(SSD1306_t * dev, int x1, int y1, int x2, int y2,  bool invert);
 void _ssd1306_circle(SSD1306_t * dev, int x0, int y0, int r, bool invert);

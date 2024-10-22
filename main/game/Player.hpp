@@ -39,7 +39,7 @@ private:
     uint8_t m_animationIndex = 0;
     const uint8_t* m_animationSequence;
     uint8_t m_animationSequenceSize = 0;
-    uint8_t m_speed = 70;
+    uint8_t m_speed = 40;
 
     bool m_moveLeft = false;
     bool m_moveRight = false;
