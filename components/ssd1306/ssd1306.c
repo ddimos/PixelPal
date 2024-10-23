@@ -516,24 +516,22 @@ uint8_t ssd1306_copy_bits(uint8_t src, uint8_t srcBitIndex, uint8_t dst, uint8_t
 void ssd1306_vertical_bitmaps(SSD1306_t* dev, int16_t xpos, int16_t ypos, const uint8_t* bitmap, uint8_t width, uint16_t size, bool transperentMode)
 {
 /*
-                                - * * * * * * *
-                                * * * * * * * *
-                                * * * * * * * *
-    dstBitIndexForSamePage ->   * * * * * * * *     - * * * * * * *     <- srcBitIndexForSamePage
-                                * * * * * * * *     * * * * * * * *
-                                * * * * * * * *     * * * * * * * *
-                                * * * * * * * *     * * * * * * * *
-                                * * * * * * * *     * * * * * * * *
-    dstBitIndexForNewPage ->    - * * * * * * *     * * * * * * * *     <- srcBitIndexForNewPage
-                                * * * * * * * *     * * * * * * * *
-                                * * * * * * * *     * * * * * * * *
-                                * * * * * * * *
-                                * * * * * * * *
-                                * * * * * * * *
-                                * * * * * * * *
-                                * * * * * * * *
-    
-    dstBitIndexForNewPage, srcBitIndexForSamePage are always 0
+                      -   - * * * * * * *
+    numberOfBitsToCopy1   * * * * * * * *
+                          * * * * * * * *
+                      -   * * * * * * * *     - * * * * * * *
+                          * * * * * * * *     * * * * * * * *
+    numberOfBitsToCopy2   * * * * * * * *     * * * * * * * *
+                          * * * * * * * *     * * * * * * * *
+                          * * * * * * * *     * * * * * * * *
+                      -   - * * * * * * *     * * * * * * * *
+                          * * * * * * * *     * * * * * * * *
+                      -   * * * * * * * *     * * * * * * * *
+                          * * * * * * * *
+                          * * * * * * * *
+                          * * * * * * * *
+                          * * * * * * * *
+                          * * * * * * * *
 */
 
     uint8_t heightBytes = size / width;
@@ -542,71 +540,67 @@ void ssd1306_vertical_bitmaps(SSD1306_t* dev, int16_t xpos, int16_t ypos, const 
     if (xpos >= 128 || xpos + width < 0 || ypos >= 64 || ypos + height < 0)
         return;
 
-    bool isNewPage = false;
-    uint8_t firstPage = (ypos / 8);
-    uint16_t srcBufferOffset = 0;;
-    uint8_t numberOfPages = heightBytes;
+    if (heightBytes >= 8)
+        return;
+    
+    uint8_t numberOfBitsToCopy1 = (abs(ypos) % 8);
+    uint8_t numberOfBitsToCopy2 = 8 - numberOfBitsToCopy1;
+
+    uint8_t firstPage = (abs(ypos) / 8);
+
+    uint8_t firstSeqment = xpos;
+    uint8_t firstSrcBufferIndex = 0;
+
+    uint8_t numberOfSections = (numberOfBitsToCopy1 == 0) ? heightBytes : heightBytes * 2;
+
+    uint8_t srcHorizontalBitIndex = 0;
+    uint8_t dstHorizontalBitIndex = numberOfBitsToCopy1 + firstPage * 8;
+
+    bool firstSectionType = false;
+    if (xpos < 0 )
+    {
+        firstSeqment = 0;
+        firstSrcBufferIndex = -xpos;
+    }
 
     if (ypos < 0)
     {
-        firstPage = 0;
-        uint8_t numberOfPagesOut = (-ypos) / 8;
-        srcBufferOffset += width * numberOfPagesOut;
-        numberOfPages -= numberOfPagesOut;
-        isNewPage = true;
+        srcHorizontalBitIndex = dstHorizontalBitIndex;
+        dstHorizontalBitIndex = 0;
     }
-
-    uint8_t firstSeqment = (xpos >=0 ) ? xpos : 0;
-    uint8_t firstSrcBufferIndex = (xpos >=0 ) ? 0 : -xpos;
-
-    uint8_t dstBitIndexForSamePage = (abs(ypos) % 8);           // Also the number of bits to copy for the new page
-    uint8_t srcBitIndexForNewPage = 8 - dstBitIndexForSamePage; // Also the number of bits to copy for the same page
-
-    int8_t numberOfBitsLeftForPage = (isNewPage) ? 8 : 8 - dstBitIndexForSamePage;
-    int8_t numOfBitsLeftInSrcBuffer = (isNewPage) ? dstBitIndexForSamePage : 8;
-
-    for (uint8_t page = firstPage; page <= firstPage + numberOfPages && page < 8; )
+    
+    for (uint8_t section = 0; section <= numberOfSections; ++section)
     {
-        uint8_t numOfBitsToCopyForPage = (isNewPage) ? dstBitIndexForSamePage : srcBitIndexForNewPage;
-		ESP_LOGD(TAG, "Page: %u, isNew: %d, offset: %u, bits to copy: %u", page, isNewPage, srcBufferOffset, numOfBitsToCopyForPage);
+        uint8_t dstPage = dstHorizontalBitIndex / 8;
+        uint8_t srcPage = srcHorizontalBitIndex / 8;
+		if (dstPage >= 8 || srcPage >= heightBytes)
+            break;
 
-        uint8_t srcBitIndex = (isNewPage) ? srcBitIndexForNewPage : 0;
-        uint8_t dstBitIndex = (isNewPage) ? 0 : dstBitIndexForSamePage;
+        uint8_t dstBitIndexForPage = dstHorizontalBitIndex % 8;
+        uint8_t srcBitIndexForPage = srcHorizontalBitIndex % 8;
 
-        uint16_t srcBufferIndex = firstSrcBufferIndex;
+        uint8_t numberOfBitsToCopy = firstSectionType ? numberOfBitsToCopy1 : numberOfBitsToCopy2;
+
+        ESP_LOGD(TAG, "srcPage: %u, dstPage: %d, src: %u, dst: %u", srcPage, dstPage, srcBitIndexForPage, dstBitIndexForPage);
+        
+        uint16_t srcBufferIndex = firstSrcBufferIndex + srcPage * width;
         for (uint8_t seg = firstSeqment; seg < xpos + width && seg < 128; ++seg)
         {
-			ESP_LOGD(TAG, "seq: %u,\n src: %u, dst: %u", seg, srcBitIndex, dstBitIndex);
-
-            int currentIndex = srcBufferIndex + srcBufferOffset;
-            if (currentIndex >= size)
+            if (srcBufferIndex >= size)
                 return;
 
-            uint8_t source = bitmap[srcBufferIndex + srcBufferOffset];
-            uint8_t destination = dev->_page[page]._segs[seg];
-            destination = ssd1306_copy_bits(source, srcBitIndex, destination, dstBitIndex, 8, transperentMode);
-            dev->_page[page]._segs[seg] = destination;
+            uint8_t source = bitmap[srcBufferIndex];
+            uint8_t destination = dev->_page[dstPage]._segs[seg];
+            destination = ssd1306_copy_bits(source, srcBitIndexForPage, destination, dstBitIndexForPage, 8, transperentMode);
+            dev->_page[dstPage]._segs[seg] = destination;
 
             srcBufferIndex++;
         }
 
-        numOfBitsLeftInSrcBuffer -= numOfBitsToCopyForPage;
-        if (numOfBitsLeftInSrcBuffer <= 0)
-        {
-            srcBufferOffset += width;
-            numOfBitsLeftInSrcBuffer = 8;
-        }
-        numberOfBitsLeftForPage -= numOfBitsToCopyForPage;
-        if (numberOfBitsLeftForPage <= 0)
-        {
-            ++page;
-            numberOfBitsLeftForPage = 8;
-            isNewPage = true;
-        }
-        else
-        {
-            isNewPage = false; 
-        }
+        srcHorizontalBitIndex += numberOfBitsToCopy;
+        dstHorizontalBitIndex += numberOfBitsToCopy;
+
+        firstSectionType = !firstSectionType;
     }
 }
 
