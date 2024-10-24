@@ -11,6 +11,8 @@ namespace pp::game
 {
 class Player
 {
+    using AnimationState = ButtonName;
+
 public:
     Player() = default;
     ~Player() = default;
@@ -29,24 +31,32 @@ public:
     void setY(float _y) { m_worldY = _y; }
 
 private:
+    
+    void requestAnimation(AnimationState _animationState);
     void setAnimation(const uint8_t* _animationSequence, uint8_t _animationSequenceSize, uint8_t _animationIndex = 0);
+    void setButton(ButtonName _button);
+    void clearButton(ButtonName _button);
+    bool isButtonSet(ButtonName _button) const;
 
     float m_worldX = 0.f;
     float m_worldY = 0.f;
 
-    uint8_t m_drawX = 0;
-    uint8_t m_drawY = 0;
+    int16_t m_drawX = 0;
+    int16_t m_drawY = 0;
+    uint8_t m_speed = 40;
+
+    int8_t m_prevDirectionX = 0;
+    int8_t m_prevDirectionY = 0;
+
+    static_assert(sizeof(ButtonName) == sizeof(uint8_t), "The button bitmask is too small");
+    uint8_t m_buttonBitmask = 0;
+
+    bool m_needToDraw = false;
+
     uint8_t m_animationIndex = 0;
     const uint8_t* m_animationSequence;
     uint8_t m_animationSequenceSize = 0;
-    uint8_t m_speed = 40;
-
-    bool m_moveLeft = false;
-    bool m_moveRight = false;
-    bool m_moveUp = false;
-    bool m_moveDown = false;
-
-    bool m_needToDraw = false;
+    AnimationState m_animationState = AnimationState::None;
 };
 
 } // namespace pp::game

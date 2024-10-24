@@ -4,11 +4,16 @@
 #include "Constants.hpp"
 #include "utils/Assert.hpp"
 
+#include "esp_log.h"
+
 namespace
 {
+static const char* TAG = "PP_MAP";
 
 constexpr uint8_t PLAYER_BITMAP_WIDTH = 12;
+constexpr uint8_t PLAYER_BITMAP_WIDTH_HALF = PLAYER_BITMAP_WIDTH / 2;
 constexpr uint8_t PLAYER_BITMAP_HEIGHT = 20;
+constexpr uint8_t PLAYER_BITMAP_HEIGHT_HALF = PLAYER_BITMAP_HEIGHT / 2;
 constexpr uint8_t PLAYER_BITMAP_SIZE = 36;
 constexpr uint8_t NUMBER_OF_PLAYER_BITMAPS = 9;
 
@@ -90,40 +95,12 @@ void Player::dispatch(const AppEvent& _event)
     {
     case AppEvent::Type::ButtonPressed:
     {
-        if (_event.button == ButtonName::LEFT)
-        {
-            m_moveLeft = true;
-            setAnimation(g_moveLeftAnimationSequence, SIDE_ANIMATION_COUNT);
-        }
-        else if (_event.button == ButtonName::RIGHT)
-        {
-            m_moveRight = true;
-            setAnimation(g_moveRightAnimationSequence, SIDE_ANIMATION_COUNT);
-        }
-        else if (_event.button == ButtonName::DOWN)
-        {
-            m_moveDown = true;
-            setAnimation(g_moveUpDownAnimationSequence, UP_DOWN_ANIMATION_COUNT);
-        }
-        else if (_event.button == ButtonName::UP)
-        {
-            m_moveUp = true;
-            setAnimation(g_moveUpDownAnimationSequence, UP_DOWN_ANIMATION_COUNT, 1);
-        }
+        setButton(_event.button);
         break;
     }
     case AppEvent::Type::ButtonReleased:
     {
-        if (_event.button == ButtonName::LEFT)
-            m_moveLeft = false;
-        else if (_event.button == ButtonName::RIGHT)
-            m_moveRight = false;
-        else if (_event.button == ButtonName::DOWN)
-            m_moveDown = false;
-        else if (_event.button == ButtonName::UP)
-            m_moveUp = false;
-        
-        setAnimation(g_standingAnimationSequence, STANDING_ANIMATION_COUNT);
+        clearButton(_event.button);
         break;
     }
     case AppEvent::Type::Tick:
@@ -138,26 +115,51 @@ void Player::dispatch(const AppEvent& _event)
 
 void Player::update()
 {
-    if (m_moveLeft || m_moveRight)
+    int8_t directionX = 0;
+    int8_t directionY = 0;
+    if (isButtonSet(ButtonName::LEFT))
+        directionX -= 1;
+    if (isButtonSet(ButtonName::RIGHT))
+        directionX += 1;
+    if (isButtonSet(ButtonName::UP))
+        directionY -= 1;
+    if (isButtonSet(ButtonName::DOWN))
+        directionY += 1;
+    
+    m_worldX += directionX * TICK_DT_S * m_speed;
+    m_worldY += directionY * TICK_DT_S * m_speed;
+
+    if (m_prevDirectionY != directionY || m_prevDirectionX != directionX)
     {
-        int d = m_moveLeft ? -1 : 1;
-        m_worldX += d * TICK_DT_S * m_speed;
+        AnimationState newAnimationState = AnimationState::None;
+
+        if (directionX > 0)
+            newAnimationState = AnimationState::LEFT;
+        else if (directionX < 0)
+            newAnimationState = AnimationState::RIGHT;
+        else
+        {
+            if (directionY > 0)
+                newAnimationState = AnimationState::UP;
+            else if (directionY < 0)
+                newAnimationState = AnimationState::DOWN;
+        }
+
+        if (m_animationState != newAnimationState)
+            requestAnimation(newAnimationState);
     }
-    else if (m_moveDown || m_moveUp)
-    {
-        int d = m_moveUp ? -1 : 1;
-        m_worldY += d * TICK_DT_S * m_speed;
-    }
+
+    m_prevDirectionX = directionX;
+    m_prevDirectionY = directionY;
 
     int previousAnimationIndex = m_animationIndex;
-
     if(m_animationIndex < (m_animationSequenceSize - 1))
         m_animationIndex++;
     else
         m_animationIndex = 0;
 
-    int drawCurrentX = static_cast<int>(m_worldX);
-    int drawCurrentY = static_cast<int>(m_worldY);
+    int16_t drawCurrentX = static_cast<int16_t>(m_worldX) % MAP_WIDTH - PLAYER_BITMAP_WIDTH_HALF;
+    int16_t drawCurrentY = static_cast<int16_t>(m_worldY) % MAP_HEIGHT - PLAYER_BITMAP_HEIGHT_HALF;
 
     if (m_drawX != drawCurrentX || m_drawY != drawCurrentY || previousAnimationIndex != m_animationIndex)
     {   
@@ -165,6 +167,7 @@ void Player::update()
 
         m_drawX = drawCurrentX;
         m_drawY = drawCurrentY;
+        ESP_LOGD(TAG, "dX %d, dY %d, X %f, Y %f", m_drawX, m_drawY, m_worldX, m_worldY);
     }
 }
 
@@ -177,18 +180,44 @@ void Player::draw(Display& _displayRef)
 void Player::reset()
 {
     m_worldX = 10.f;
-    m_worldY = 8.f;
+    m_worldY = 14.f;
 
     m_drawX = 0;
     m_drawY = 0;
-    m_animationIndex = 0;
     m_speed = 40;
 
-    m_moveLeft = false;
-    m_moveRight = false;
+    m_buttonBitmask = 0;
     m_needToDraw = false;
 
-    setAnimation(g_standingAnimationSequence, STANDING_ANIMATION_COUNT);
+    m_prevDirectionX = 0;
+    m_prevDirectionY = 0;
+
+    m_animationIndex = 0;
+
+    requestAnimation(AnimationState::None);
+}
+
+void Player::requestAnimation(AnimationState _animationState)
+{
+    switch (_animationState)
+    {
+    case AnimationState::UP:
+        setAnimation(g_moveUpDownAnimationSequence, UP_DOWN_ANIMATION_COUNT, 1);
+        break;
+    case AnimationState::DOWN:
+        setAnimation(g_moveUpDownAnimationSequence, UP_DOWN_ANIMATION_COUNT);
+        break;
+    case AnimationState::LEFT:
+        setAnimation(g_moveRightAnimationSequence, SIDE_ANIMATION_COUNT);
+        break;
+    case AnimationState::RIGHT:
+        setAnimation(g_moveLeftAnimationSequence, SIDE_ANIMATION_COUNT);
+        break;
+    default:
+        setAnimation(g_standingAnimationSequence, STANDING_ANIMATION_COUNT);
+        break;
+    }
+    m_animationState = _animationState;
 }
 
 void Player::setAnimation(const uint8_t* _animationSequence, uint8_t _animationSequenceSize, uint8_t _animationIndex/*= 0*/)
@@ -196,6 +225,21 @@ void Player::setAnimation(const uint8_t* _animationSequence, uint8_t _animationS
     m_animationIndex = _animationIndex;
     m_animationSequence = _animationSequence;
     m_animationSequenceSize = _animationSequenceSize;
+}
+
+void Player::setButton(ButtonName _button)
+{
+    m_buttonBitmask |= 1 << static_cast<int>(_button);
+}
+
+void Player::clearButton(ButtonName _button)
+{
+    m_buttonBitmask &= ~(1 << static_cast<int>(_button));
+}
+
+bool Player::isButtonSet(ButtonName _button) const
+{
+    return (m_buttonBitmask & (1 << static_cast<int>(_button))) != 0;
 }
 
 } // namespace pp::game

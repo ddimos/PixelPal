@@ -37,9 +37,9 @@ void Display::drawText(const char* _text, int _length, int _pos)
     ssd1306_display_text(&g_display, _pos, _text, _length, false);
 }
 
-void Display::addBitmap(int _x, int _y, const uint8_t* _bitmap, int _width, int _height)
+void Display::addBitmap(int16_t _x, int16_t _y, const uint8_t* _bitmap, int _width, int _size)
 {
-    ssd1306_vertical_bitmaps(&g_display, _x, _y, _bitmap, _width, _height, true);
+    ssd1306_vertical_bitmaps(&g_display, _x, _y, _bitmap, _width, _size, true);
 }
 
 void Display::getBuffer(uint8_t* _buffer)

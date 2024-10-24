@@ -12,15 +12,6 @@ namespace pp::game
 {
 class Player;
 
-enum PreloadedZone : uint8_t
-{
-    CENTER = 0,
-    UP,
-    RIGHT,
-    DOWN,
-    LEFT
-};
-
 constexpr uint8_t NUMBER_OF_PRELOADED_ZONES = 2;
 
 class Map
@@ -36,9 +27,7 @@ public:
     void draw(Display& _display);
 
 private:
-    void preloadZones(PreloadedZone _nextPreloadedZone);
     void preloadZone(uint8_t _nextZoneNumber, uint8_t _nextPreloadedZoneIndex);
-    int getNextZoneNumber(PreloadedZone _nextPreloadedZone) const;
 
     uint8_t m_currentZoneNumber = 255;
     uint8_t m_previousZoneNumber = 255;

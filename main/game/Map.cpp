@@ -3,6 +3,7 @@
 #include "Types.hpp"
 #include "Player.hpp"
 #include "utils/Assert.hpp"
+#include "Constants.hpp"
 
 #include <cstring>
 #include "esp_log.h"
@@ -11,9 +12,7 @@ namespace
 {
 static const char* TAG = "PP_MAP";
 
-constexpr unsigned MAP_BITMAP_WIDTH = 128;
-constexpr unsigned MAP_BITMAP_HEIGHT = 64;
-constexpr unsigned NUMBER_OF_BYTES_PER_ZONE = MAP_BITMAP_WIDTH * MAP_BITMAP_HEIGHT / 8;
+constexpr unsigned NUMBER_OF_BYTES_PER_ZONE = pp::MAP_WIDTH * pp::MAP_HEIGHT / 8;
 
 constexpr unsigned NUMBER_OF_ZONES_WIDTH = 3;
 constexpr unsigned NUMBER_OF_ZONES_HEIGHT = 3;
@@ -22,7 +21,7 @@ constexpr unsigned NUMBER_OF_ZONES = NUMBER_OF_ZONES_WIDTH * NUMBER_OF_ZONES_HEI
 constexpr unsigned NUMBER_OF_MAP_ELEMENT_TYPES = 9;
 constexpr unsigned MAP_ELEMENT_WIDTH = 16;
 constexpr unsigned MAP_ELEMENT_HEIGHT = 8;
-constexpr unsigned NUMBER_OF_MAP_ELEMENTS_PER_ZONE = (MAP_BITMAP_WIDTH / MAP_ELEMENT_WIDTH) * (MAP_BITMAP_HEIGHT / MAP_ELEMENT_HEIGHT);
+constexpr unsigned NUMBER_OF_MAP_ELEMENTS_PER_ZONE = (pp::MAP_WIDTH / MAP_ELEMENT_WIDTH) * (pp::MAP_HEIGHT / MAP_ELEMENT_HEIGHT);
 
 static_assert(NUMBER_OF_ZONES < 255, "Change type of the zone number");
 
@@ -185,7 +184,7 @@ void Map::init(Display& _display)
         zone = std::make_unique<uint8_t[]>(NUMBER_OF_BYTES_PER_ZONE);
     }
 
-    m_currentZoneNumber = 6;
+    m_currentZoneNumber = 0;
     m_currentZoneIndex = 0;
     preloadZone(m_currentZoneNumber, m_currentZoneIndex);
 }
@@ -200,62 +199,34 @@ void Map::deinit()
 
 void Map::update(Player& _player)
 {
-    PreloadedZone nextPreloadedZone = PreloadedZone::CENTER;
     float x = _player.getX(), y = _player.getY();
-    if (x < 2)
-    {
-        nextPreloadedZone = PreloadedZone::LEFT;
-        _player.setX(MAP_BITMAP_WIDTH - 2 - 16);
-    }
-    else if (x > MAP_BITMAP_WIDTH - 2 - 16)
-    {
-        nextPreloadedZone = PreloadedZone::RIGHT;
-        _player.setX(2);
-    }
-    else if (y < 2)
-    {
-        nextPreloadedZone = PreloadedZone::UP;
-        _player.setY(MAP_BITMAP_HEIGHT - 2 - 20);
-    }
-    else if (y > MAP_BITMAP_HEIGHT - 2 - 20)
-    {
-        nextPreloadedZone = PreloadedZone::DOWN;
-        _player.setY(2);
-    }
+    PP_ASSERT((x < 0.f || y < 0.f), "World position can't be less than zero");
+    uint8_t ix = static_cast<int>(x) / MAP_WIDTH;
+    uint8_t iy = static_cast<int>(y) / MAP_HEIGHT;
 
-    if (nextPreloadedZone != PreloadedZone::CENTER)
+    uint8_t nextZoneNumber = ix + iy * NUMBER_OF_ZONES_WIDTH;
+    if (m_currentZoneNumber != nextZoneNumber)
     {
-        ESP_LOGD(TAG, "pX %f, pY %f, X %f, Y %f", x, y, _player.getX(), _player.getY());
-        preloadZones(nextPreloadedZone);
+        ESP_LOGI(TAG, "preloadZones nextZone %d, current %d", nextZoneNumber, m_currentZoneNumber);
+
+        if (m_previousZoneNumber == nextZoneNumber)
+        {
+            std::swap(m_previousZoneNumber, m_currentZoneNumber);
+            std::swap(m_previousZoneIndex, m_currentZoneIndex);
+            return;
+        }
+
+        preloadZone(nextZoneNumber, m_previousZoneIndex);
+
+        std::swap(m_previousZoneIndex, m_currentZoneIndex);
+        m_previousZoneNumber = m_currentZoneNumber;
+        m_currentZoneNumber = nextZoneNumber;
     }
 }
 
 void Map::draw(Display& _display)
 {
     _display.setBuffer(m_preloadedZones[m_currentZoneIndex].get());
-}
-
-void Map::preloadZones(PreloadedZone _nextPreloadedZone)
-{
-    ESP_LOGD(TAG, "preloadZones nextZone %d, pI %d, cI %d, pN %d, cN %d", 
-        (int)_nextPreloadedZone, m_previousZoneIndex, m_currentZoneIndex, m_previousZoneNumber, m_currentZoneNumber);
-
-    int nextZoneNumber = getNextZoneNumber(_nextPreloadedZone);
- 
-    ESP_LOGD(TAG, "preloadZones nextZone %d", nextZoneNumber);
-
-    if (m_previousZoneNumber == nextZoneNumber)
-    {
-        std::swap(m_previousZoneNumber, m_currentZoneNumber);
-        std::swap(m_previousZoneIndex, m_currentZoneIndex);
-        return;
-    }
-
-    preloadZone(nextZoneNumber, m_previousZoneIndex);
-
-    std::swap(m_previousZoneIndex, m_currentZoneIndex);
-    m_previousZoneNumber = m_currentZoneNumber;
-    m_currentZoneNumber = nextZoneNumber;
 }
 
 void Map::preloadZone(uint8_t _nextZoneNumber, uint8_t _nextPreloadedZoneIndex)
@@ -273,29 +244,4 @@ void Map::preloadZone(uint8_t _nextZoneNumber, uint8_t _nextPreloadedZoneIndex)
         ++i;
     }
 }
-
-int Map::getNextZoneNumber(PreloadedZone _nextPreloadedZone) const
-{
-    int nextZoneNumber = 0;
-    switch (_nextPreloadedZone)
-    {
-    case PreloadedZone::UP:
-        nextZoneNumber = m_currentZoneNumber - NUMBER_OF_ZONES_WIDTH;
-        break;
-    case PreloadedZone::RIGHT:
-        nextZoneNumber = m_currentZoneNumber + 1;
-        break;
-    case PreloadedZone::DOWN:
-        nextZoneNumber = m_currentZoneNumber + NUMBER_OF_ZONES_WIDTH;
-        break;
-    case PreloadedZone::LEFT:
-        nextZoneNumber = m_currentZoneNumber - 1;
-        break;
-    default:
-        PP_ASSERT(false, "Invalid value of next preloaded zone.");
-        break;
-    }
-    return nextZoneNumber;
-}
-
 } // namespace pp::game
